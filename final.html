@@ -1,0 +1,158 @@
+<div id="container" style="background-color:black"></div>
+
+<script type="text/javascript" src="three.min.js"></script>
+
+<script id="fragmentShader" type="x-shader/x-fragment">
+
+varying vec4 oColor; 
+
+	void main() {
+		gl_FragColor = oColor; 
+	}
+
+</script>
+
+<script id="fragmentShader2" type="x-shader/x-fragment">
+
+uniform vec3      iResolution;           // viewport resolution (in pixels)
+uniform float     time;           // shader playback time (in seconds)
+
+void main(void)
+{
+	vec2 uv = gl_FragCoord.xy / (iResolution.xy) * sin(gl_FragCoord.y);
+	gl_FragColor = vec4(uv,0.5+1.0*sin(time),5.0);
+}
+
+ </script> 
+
+
+<script id="vertexShader" type="x-shader/x-vertex">
+
+//we add something called a uniform that is telling openGL that everysingle instance of the vertex shader is going to have the exact same value
+uniform float time; 
+varying vec4 oColor; 
+
+	void main()
+	{
+		vec4 mvPosition = modelViewMatrix * vec4( position.x * (1.0 * sin(time) ), position.y * (1.0 * sin(time) ), position.z * (2.0 * sin(time)), 1.0);  
+		gl_Position = projectionMatrix * mvPosition;
+		oColor = vec4 (gl_Position.x * sin(time), gl_Position.y * sin(time), gl_Position.z, gl_Position.w);  
+
+	}
+
+</script>
+
+<script type="text/javascript">
+	var container;
+
+	var clock = new THREE.Clock();
+
+	var light; 
+
+	var camera, scene, renderer, composer;
+
+	var uniforms, uniforms2, material, material2, mesh, mesh2;
+
+	var mouseX = 0, mouseY = 0,
+	lat = 0, lon = 0, phy = 0, theta = 0;
+
+	var width = window.innerWidth || 2;
+	var height = window.innerHeight || 2;
+
+	var windowHalfX = width / 2;
+	var windowHalfY = height / 2;
+
+	init();
+	animate();
+
+	function init() {
+
+		container = document.getElementById( 'container' );
+
+		camera = new THREE.PerspectiveCamera( 35, windowHalfX / windowHalfY, 1, 3000 );
+		camera.position.z = 3;
+
+		scene = new THREE.Scene();
+
+		uniforms = {
+			time: { type: "f", value:1.0}
+		};
+
+		uniforms2 = {
+			time: {type: "f", value: 1.0 },
+			iResolution: {type: "v3", value: [width, height, 2]}
+		}
+
+		var size = 0.65;
+
+		material = new THREE.ShaderMaterial( {
+			uniforms: uniforms,
+			vertexShader: document.getElementById( 'vertexShader' ).textContent,
+			fragmentShader: document.getElementById( 'fragmentShader' ).textContent,
+			
+		} );
+
+		material2 = new THREE.ShaderMaterial( {
+			uniforms: uniforms2, 
+			fragmentShader: document.getElementById('fragmentShader2').textContent,
+			vertexShader: document.getElementById( 'vertexShader').textContent, 
+
+
+		}); 
+
+
+		mesh = new THREE.Mesh( new THREE.TorusGeometry( 1.2, 0.3, 30, 30 ), material );
+		mesh.rotation.x = 0.3;
+		scene.add( mesh );
+
+		 mesh2 = new THREE.Mesh (new THREE.SphereGeometry(size,40, 40,40), material2); 
+		 scene.add(mesh2); 
+
+		//
+
+		renderer = new THREE.WebGLRenderer( { antialias: true } );
+		container.appendChild( renderer.domElement );
+		renderer.autoClear = false;
+
+		light = new THREE.AmbientLight (0x7F00FF, 1.0); 
+		light.position = camera.position; 
+		scene.add(light); 
+
+
+		onWindowResize();
+
+		window.addEventListener( 'resize', onWindowResize, false );
+
+	}
+	function onWindowResize( event ) {
+
+		// uniforms.resolution.value.x = window.innerWidth;
+		// uniforms.resolution.value.y = window.innerHeight;
+
+		renderer.setSize( window.innerWidth, window.innerHeight );
+
+		camera.aspect = window.innerWidth / window.innerHeight;
+		camera.updateProjectionMatrix();
+
+	}
+
+	function animate() {
+		requestAnimationFrame( animate );
+		render();
+	}
+
+	function render() {
+
+		var delta = 5 * clock.getDelta();
+
+		uniforms+= 0.2 * delta;
+		uniforms2.time.value += 0.2 * delta;
+
+		mesh.rotation.y += 0.001 * delta;
+		mesh.rotation.x += 0.07 * delta;
+
+		renderer.clear();
+		renderer.render( scene, camera );
+
+	}
+</script>
